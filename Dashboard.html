@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تقرير نقاط الصرف</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f2f2f2;
+      direction: rtl;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .place-card {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+    .place-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #007bff;
+    }
+
+    .place-count {
+      font-size: 26px;
+      color: #333;
+    }
+
+    .buttons {
+      margin: 20px auto;
+    }
+
+    .refresh-btn {
+      background-color: #28a745;
+      color: white;
+      font-size: 18px;
+      padding: 10px 25px;
+      border: none;
+      border-radius: 8px;
+      margin: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .refresh-btn:hover {
+      background-color: #218838;
+    }
+
+    .summary {
+      margin-top: 30px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .summary span {
+      color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>تقرير أعداد المستلمين في نقاط الصرف</h1>
+
+  <div class="buttons">
+    <button class="refresh-btn" onclick="loadCounts(false)">تحميل بيانات كل اللجان من اليوم الاول</button>
+    <button class="refresh-btn" onclick="loadCounts(true)">تحديث</button>
+  </div>
+
+  <div class="grid" id="reportGrid">
+    <!-- Cards will be inserted here dynamically -->
+  </div>
+
+  <div class="summary" id="summary">
+    <!-- Totals will be inserted here -->
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDqmzw37g6Haeocjp5-ndDFV7Nar_YlkU",
+      authDomain: "elecationseg.firebaseapp.com",
+      databaseURL: "https://elecationseg-default-rtdb.firebaseio.com",
+      projectId: "elecationseg",
+      storageBucket: "elecationseg.firebasestorage.app",
+      messagingSenderId: "140861798782",
+      appId: "1:140861798782:web:59fd3fa99506c33aa55b2f"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const places = [
+      "معرض سيارات الوهاب 1",
+      "معرض سيارات الوهاب 2",
+      "مكتب طرف هاني بلوظة",
+      "مكتب كريم مانو",
+      "فرن خالد صبري 1",
+      "فرن خالد صبري 2",
+      "جمعية الحاج سمير فتحي",
+      "مكتب طرف حج سيد بيبسي",
+      "شقة طرف ايهاب الفيشاوي",
+      "الشئون الاجتماعية 1",
+      "الشئون الاجتماعية 2"
+    ];
+
+    function isToday(dateStr) {
+      const inputDate = new Date(dateStr);
+      const today = new Date();
+      return (
+        inputDate.getDate() === today.getDate() &&
+        inputDate.getMonth() === today.getMonth() &&
+        inputDate.getFullYear() === today.getFullYear()
+      );
+    }
+
+    function loadCounts(onlyToday = false) {
+      const reportGrid = document.getElementById('reportGrid');
+      const summary = document.getElementById('summary');
+      reportGrid.innerHTML = '';
+      summary.innerHTML = '';
+
+      const counts = {};
+      let totalAll = 0;
+      let totalToday = 0;
+
+      places.forEach(place => counts[place] = 0);
+
+      db.ref("national_ids").once("value").then(snapshot => {
+        snapshot.forEach(child => {
+          const data = child.val();
+          const place = data.place;
+          const createdAt = data.created_at;
+
+          if (!places.includes(place)) return;
+
+          if (!onlyToday || isToday(createdAt)) {
+            counts[place]++;
+            if (isToday(createdAt)) totalToday++;
+            totalAll++;
+          }
+        });
+
+        // Display cards
+        places.forEach(place => {
+          const card = document.createElement('div');
+          card.className = 'place-card';
+          card.innerHTML = `
+            <div class="place-name">${place}</div>
+            <div class="place-count">${counts[place]} شخص</div>
+          `;
+          reportGrid.appendChild(card);
+        });
+
+        // Summary section
+        summary.innerHTML = `
+          <p>📅 إجمالي اليوم: <span>${totalToday}</span> شخص</p>
+          <p>📊 إجمالي كل الأيام: <span>${totalAll}</span> شخص</p>
+        `;
+      });
+    }
+
+    window.onload = () => loadCounts(false);
+  </script>
+
+</body>
+</html>
